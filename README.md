@@ -51,7 +51,7 @@ This project defaults to **`gemma4:12b-mlx`** (see `DEFAULT_MODEL` in
 - **Size:** a 12B model is roughly 8–20 GB on disk depending on quantization
   (the compressed numeric precision). Make sure the Mac has room.
 - **Switching models:** whatever you pulled, pass its exact name with
-  `--model`, e.g. `--model gemma3:12b`. The name must match what
+  `--model`, e.g. `--model qwen3:8b`. The name must match what
   `ollama list` shows.
 
 Verify the model is ready:

@@ -38,7 +38,7 @@ Then open your browser to: **http://localhost:8000**
 
 ```
 --case    Path to case JSON (default: cases/appendicitis.json)
---model   Ollama model name (default: gemma3:12b)
+--model   Ollama model name (default: gemma4:12b-mlx)
 --port    Port to serve on (default: 8000)
 ```
 

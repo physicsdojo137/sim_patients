@@ -248,3 +248,7 @@ Copy `cases/appendicitis.json` and edit the fields:
 Load it with `--case cases/yourcase.json`. New order keywords go in
 `ORDER_PATTERNS` in `medsim.py` (regex → order key), with display labels in
 `format_order_key`.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, teach with it.

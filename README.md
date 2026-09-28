@@ -35,7 +35,7 @@ A *model* is the actual AI brain (billions of parameters). Ollama downloads
 them from its model library with `ollama pull`:
 
 ```bash
-ollama pull gemma3:12b
+ollama pull gemma4:12b-mlx
 ```
 
 This project defaults to **`gemma4:12b-mlx`** (see `DEFAULT_MODEL` in

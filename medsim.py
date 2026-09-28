@@ -29,7 +29,6 @@ from fastapi.staticfiles import StaticFiles
 # Config
 # ─────────────────────────────────────────────────────────────────────────────
 OLLAMA_URL = "http://localhost:11434/api/chat"
-#DEFAULT_MODEL = "gemma3:12b"  # change to match your pulled model name
 DEFAULT_MODEL = "gemma4:12b-mlx"  # change to match your pulled model name
 # Order detection keywords → category
 ORDER_PATTERNS = {
@@ -512,7 +511,7 @@ if __name__ == "__main__":
     parser.add_argument("--case", default="cases/appendicitis.json",
                         help="Path to case JSON file")
     parser.add_argument("--model", default=DEFAULT_MODEL,
-                        help="Ollama model name (default: gemma3:12b)")
+                        help="Ollama model name (default: gemma4:12b-mlx)")
     parser.add_argument("--port", type=int, default=8000,
                         help="Port to serve on (default: 8000)")
     args = parser.parse_args()

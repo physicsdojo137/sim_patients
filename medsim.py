@@ -225,7 +225,7 @@ async def stream_patient_response(session: Session, websocket: WebSocket, model:
         *session.conversation_history,
     ]
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
         async with client.stream(
             "POST",
             OLLAMA_URL,

@@ -10,7 +10,7 @@ pip install -r requirements.txt
 
 ```bash
 # Pull the model if you haven't already
-ollama pull gemma3:12b
+ollama pull gemma4:12b-mlx
 
 # Ollama starts automatically on Mac, but to verify:
 ollama list
@@ -20,7 +20,7 @@ ollama list
 
 ```bash
 # From the medsim/ folder:
-python medsim.py --case cases/appendicitis.json --model gemma3:12b
+python medsim.py --case cases/appendicitis.json --model gemma4:12b-mlx
 ```
 
 Then open your browser to: **http://localhost:8000**

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedSim Patient Simulator</title>
+<style>
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f1117;
+  color: #e1e4e8;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Topbar ─────────────────────────────────────────────────────── */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+#topbar h1 { font-size: 15px; font-weight: 700; color: #f0f6fc; }
+#topbar .spacer { flex: 1; }
+.status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+}
+.pill-idle    { background: #1c2128; color: #8b949e; border: 1px solid #30363d; }
+.pill-active  { background: #1f3a2d; color: #3fb950; border: 1px solid #238636; }
+.pill-waiting { background: #2d2205; color: #d29922; border: 1px solid #bb8009; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ── Views ──────────────────────────────────────────────────────── */
+.view { display: none; flex: 1; overflow: hidden; }
+.view.active { display: flex; }
+
+/* ── CASE EDITOR view ───────────────────────────────────────────── */
+#view-case {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 32px 16px;
+  gap: 0;
+}
+#case-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 720px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+#case-card h2 { font-size: 18px; font-weight: 700; color: #f0f6fc; }
+#case-card .subtitle { font-size: 13px; color: #8b949e; margin-top: -14px; }
+
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-group label { font-size: 12px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
+.field-group input, .field-group textarea {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e1e4e8;
+  font-size: 13.5px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color .2s;
+}
+.field-group input:focus, .field-group textarea:focus { border-color: #58a6ff; }
+.field-group textarea { resize: vertical; line-height: 1.5; }
+
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.vital-cell {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vital-cell .vl { font-size: 10px; color: #8b949e; font-weight: 600; text-transform: uppercase; }
+.vital-cell input {
+  background: transparent;
+  border: none;
+  color: #e1e4e8;
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+}
+
+.btn-start-encounter {
+  background: #238636;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+  width: 100%;
+}
+.btn-start-encounter:hover { background: #2ea043; }
+
+/* ── ENCOUNTER view ─────────────────────────────────────────────── */
+#view-encounter {
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* EMR panel */
+#emr-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#emr-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+#vitals-bar {
+  padding: 12px 14px;
+  border-bottom: 1px solid #30363d;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.vital-display { display: flex; flex-direction: column; gap: 1px; }
+.vital-display .vd-label { font-size: 9px; color: #8b949e; font-weight: 600; text-transform: uppercase; }
+.vital-display .vd-value { font-size: 14px; font-weight: 700; color: #e1e4e8; }
+.vital-display .vd-value.abnormal { color: #f85149; }
+
+#results-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#results-area::-webkit-scrollbar { width: 4px; }
+#results-area::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+
+.result-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  animation: fadeIn .3s ease;
+}
+.result-card.abnormal { border-color: #f85149; }
+.result-card .rc-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+.result-card.abnormal .rc-label { color: #f85149; }
+.result-card .rc-text { color: #c9d1d9; }
+
+.emr-empty {
+  color: #484f58;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* Chat area */
+#chat-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#patient-header {
+  padding: 10px 16px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+#patient-header .ph-name { font-size: 14px; font-weight: 700; }
+#patient-header .ph-sub { font-size: 12px; color: #8b949e; }
+#patient-header .ph-spacer { flex: 1; }
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+#messages::-webkit-scrollbar { width: 6px; }
+#messages::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+.msg { display: flex; gap: 10px; max-width: 82%; animation: fadeIn .25s ease; }
+.msg.clinician { align-self: flex-end; flex-direction: row-reverse; }
+.msg.patient   { align-self: flex-start; }
+.msg.system    { align-self: center; max-width: 100%; }
+.msg.emr-msg   { align-self: center; max-width: 100%; }
+
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.av-patient   { background: #1f3a2d; border: 1px solid #238636; }
+.av-clinician { background: #1a2d4a; border: 1px solid #1f6feb; }
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.bubble-patient   { background: #1c2128; border: 1px solid #30363d; border-radius: 12px 12px 12px 2px; }
+.bubble-clinician { background: #1a2d4a; border: 1px solid #1f6feb; border-radius: 12px 12px 2px 12px; }
+.bubble-system    {
+  background: #1c2128; border: 1px solid #30363d;
+  border-radius: 8px; color: #8b949e; font-size: 12px;
+  text-align: center; padding: 6px 14px;
+}
+.bubble-emr {
+  background: #1c1a0d; border: 1px solid #bb8009;
+  border-radius: 8px; color: #d29922; font-size: 12px;
+  padding: 8px 14px;
+}
+
+.speaker { font-size: 10px; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 3px; }
+.sp-patient   { color: #3fb950; }
+.sp-clinician { color: #58a6ff; }
+
+/* typing dots */
+.typing-bubble { display:flex; gap:5px; align-items:center; padding:14px 16px; }
+.typing-bubble span { width:7px; height:7px; border-radius:50%; background:#8b949e; animation:bounce .9s infinite; }
+.typing-bubble span:nth-child(2){animation-delay:.15s}
+.typing-bubble span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* input bar */
+#input-bar {
+  padding: 12px 16px;
+  background: #161b22;
+  border-top: 1px solid #30363d;
+  flex-shrink: 0;
+}
+#input-bar .ib-row { display:flex; gap:8px; align-items:flex-end; }
+#clinician-input {
+  flex:1; min-height:40px; max-height:120px;
+  background:#0d1117; border:1px solid #30363d; border-radius:8px;
+  color:#e1e4e8; font-size:13.5px; font-family:inherit;
+  padding:9px 12px; outline:none; resize:none; line-height:1.4;
+  overflow-y:auto; transition:border-color .2s;
+}
+#clinician-input:focus { border-color:#1f6feb; }
+#clinician-input::placeholder { color:#484f58; }
+.btn-send {
+  background:#1f6feb; color:#fff; border:none; border-radius:8px;
+  padding:9px 18px; font-size:13px; font-weight:700; cursor:pointer;
+  transition:background .15s;
+}
+.btn-send:hover:not(:disabled) { background:#388bfd; }
+.btn-send:disabled { opacity:.35; cursor:not-allowed; }
+.ib-hint { font-size:11px; color:#484f58; margin-top:5px; }
+
+/* Disposition confirm modal */
+#disp-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.7);
+  z-index:100; align-items:center; justify-content:center;
+}
+#disp-overlay.show { display:flex; }
+#disp-modal {
+  background:#161b22; border:1px solid #30363d; border-radius:10px;
+  width:520px; max-width:95vw; padding:28px 32px;
+  display:flex; flex-direction:column; gap:18px;
+}
+#disp-modal h3 { font-size:16px; font-weight:700; }
+#disp-modal p  { font-size:13.5px; color:#c9d1d9; line-height:1.6; }
+.disp-type-row { display:flex; flex-wrap:wrap; gap:8px; }
+.disp-type-btn {
+  background:#0d1117; border:1px solid #30363d; border-radius:6px;
+  color:#c9d1d9; font-size:12px; padding:7px 14px;
+  cursor:pointer; transition:border-color .15s, background .15s;
+}
+.disp-type-btn:hover  { border-color:#58a6ff; background:#1a2d4a; color:#58a6ff; }
+.disp-type-btn.selected { border-color:#238636; background:#1f3a2d; color:#3fb950; }
+.disp-actions { display:flex; gap:10px; justify-content:flex-end; }
+.btn-confirm  { background:#238636; color:#fff; border:none; border-radius:6px; padding:9px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+.btn-cancel   { background:transparent; color:#8b949e; border:1px solid #30363d; border-radius:6px; padding:9px 20px; font-size:13px; cursor:pointer; }
+.btn-confirm:hover { background:#2ea043; }
+.btn-cancel:hover  { background:#21262d; }
+
+/* SUMMARY view */
+#view-summary {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 32px 16px;
+}
+#summary-card {
+  background:#161b22; border:1px solid #30363d; border-radius:10px;
+  width:100%; max-width:720px; padding:28px 32px;
+  display:flex; flex-direction:column; gap:18px;
+}
+#summary-card h2 { font-size:20px; font-weight:700; }
+.summary-section h3 { font-size:13px; font-weight:700; color:#8b949e; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:8px; }
+.turn-log { display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; }
+.turn-row { display:flex; gap:10px; font-size:13px; line-height:1.5; }
+.turn-speaker { font-weight:700; min-width:80px; flex-shrink:0; }
+.turn-speaker.cl { color:#58a6ff; }
+.turn-speaker.pt { color:#3fb950; }
+.order-row { font-size:12.5px; color:#c9d1d9; padding:6px 0; border-bottom:1px solid #21262d; }
+.order-row .ol { font-weight:700; color:#8b949e; }
+.order-row.abn .ol { color:#f85149; }
+.meta-row { font-size:13px; color:#8b949e; }
+.meta-row span { color:#e1e4e8; font-weight:600; }
+.btn-new-session {
+  background:#1f6feb; color:#fff; border:none; border-radius:8px;
+  padding:11px 24px; font-size:14px; font-weight:700; cursor:pointer;
+}
+.btn-new-session:hover { background:#388bfd; }
+.truth-banner {
+  background:#1a2d4a; border:1px solid #1f6feb; border-radius:8px;
+  padding:14px 18px; font-size:14px; font-weight:600; color:#58a6ff;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div id="topbar">
+  <h1>🏥 MedSim Patient Simulator</h1>
+  <div class="spacer"></div>
+  <div class="status-pill pill-idle" id="status-pill">No active session</div>
+</div>
+
+<!-- ── VIEW: CASE EDITOR ── -->
+<div class="view active" id="view-case">
+  <div id="case-card">
+    <h2 id="case-name-display">Loading case…</h2>
+    <p class="subtitle">Review the case details below, then start the encounter.</p>
+
+    <div class="row-2">
+      <div class="field-group">
+        <label>Patient name</label>
+        <input type="text" id="f-name" placeholder="Jane Smith">
+      </div>
+      <div class="field-group">
+        <label>Age / Sex</label>
+        <input type="text" id="f-age-sex" placeholder="24F">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label>Chief complaint</label>
+      <input type="text" id="f-cc" placeholder="Abdominal pain × 12 hours">
+    </div>
+
+    <div class="field-group">
+      <label>History of present illness</label>
+      <textarea id="f-hpi" rows="3"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Past medical history / Medications / Allergies</label>
+      <textarea id="f-pmh" rows="2"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label>Vitals (this session will use these with random variation applied)</label>
+      <div class="vitals-grid" id="vitals-grid"></div>
+    </div>
+
+    <button class="btn-start-encounter" id="btn-start">▶ Start Encounter</button>
+  </div>
+</div>
+
+<!-- ── VIEW: ENCOUNTER ── -->
+<div class="view" id="view-encounter">
+
+  <!-- EMR panel -->
+  <div id="emr-panel">
+    <div id="emr-header">📋 EMR — Orders &amp; Results</div>
+    <div id="vitals-bar"><!-- populated on start --></div>
+    <div id="results-area">
+      <div class="emr-empty" id="emr-empty">No orders placed yet.</div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div id="chat-area">
+    <div id="patient-header">
+      <span style="font-size:22px">🧑‍🦱</span>
+      <div>
+        <div class="ph-name" id="ph-name">Patient</div>
+        <div class="ph-sub" id="ph-sub">Active encounter</div>
+      </div>
+      <div class="ph-spacer"></div>
+      <button class="btn-send" id="btn-end-session" style="background:#b62324;font-size:12px;padding:6px 14px">
+        End Encounter
+      </button>
+    </div>
+
+    <div id="messages"></div>
+
+    <div id="input-bar">
+      <div class="ib-row">
+        <textarea id="clinician-input" rows="1"
+          placeholder="What do you say to the patient? (Enter to send, Shift+Enter for new line)"></textarea>
+        <button class="btn-send" id="btn-send">Send</button>
+      </div>
+      <div class="ib-hint">You are the clinician. Type what you say or ask.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── VIEW: SUMMARY ── -->
+<div class="view" id="view-summary">
+  <div id="summary-card">
+    <h2>Session Complete</h2>
+    <div class="truth-banner" id="truth-banner"></div>
+
+    <div class="summary-section">
+      <h3>Session Info</h3>
+      <div class="meta-row" id="meta-row"></div>
+    </div>
+
+    <div class="summary-section">
+      <h3>Vitals Used</h3>
+      <div id="summary-vitals" class="meta-row"></div>
+    </div>
+
+    <div class="summary-section">
+      <h3>Conversation</h3>
+      <div class="turn-log" id="summary-turns"></div>
+    </div>
+
+    <div class="summary-section" id="orders-section" style="display:none">
+      <h3>Orders &amp; Results</h3>
+      <div id="summary-orders"></div>
+    </div>
+
+    <div class="summary-section" id="disp-section">
+      <h3>Disposition</h3>
+      <div id="summary-disp" class="meta-row"></div>
+    </div>
+
+    <button class="btn-new-session" id="btn-new-session">↩ Start New Session</button>
+  </div>
+</div>
+
+<!-- Disposition confirm modal -->
+<div id="disp-overlay">
+  <div id="disp-modal">
+    <h3>Disposition Detected</h3>
+    <p>You said: <em id="disp-clinician-text"></em></p>
+    <p>Please confirm the disposition type:</p>
+    <div class="disp-type-row">
+      <button class="disp-type-btn" data-type="discharge_home">Discharge home</button>
+      <button class="disp-type-btn" data-type="transfer_ed">Transfer to ED</button>
+      <button class="disp-type-btn" data-type="call_surgery">Surgery consult</button>
+      <button class="disp-type-btn" data-type="admit">Admit</button>
+      <button class="disp-type-btn" data-type="ems">Call EMS</button>
+      <button class="disp-type-btn" data-type="other">Other</button>
+    </div>
+    <div class="disp-actions">
+      <button class="btn-cancel" id="disp-cancel-btn">Not yet</button>
+      <button class="btn-confirm" id="disp-confirm-btn" disabled>Confirm &amp; Close Session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════
+let ws = null;
+let sessionData = null;
+let pendingDispositionText = null;
+let selectedDispType = null;
+
+// ═══════════════════════════════════════════════════════════════════
+// Utilities
+// ═══════════════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function setStatus(label, cls) {
+  const p = $('status-pill');
+  p.textContent = label;
+  p.className = 'status-pill ' + cls;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function scrollBottom() {
+  const m = $('messages');
+  requestAnimationFrame(() => { m.scrollTop = m.scrollHeight; });
+}
+
+function fmtVitals(v) {
+  return `HR ${v.hr} | BP ${v.bp_systolic}/${v.bp_diastolic} | RR ${v.rr} | Temp ${v.temp_c}°C | SpO2 ${v.spo2}%`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Case Editor population
+// ═══════════════════════════════════════════════════════════════════
+async function loadCase() {
+  try {
+    const res = await fetch('/api/case');
+    const data = await res.json();
+    if (data.error) { alert('Could not load case: ' + data.error); return; }
+
+    $('case-name-display').textContent = data.case_name;
+    $('f-name').value = data.patient.name;
+    $('f-age-sex').value = `${data.patient.age}${data.patient.sex[0]}`;
+    $('f-cc').value = data.patient.chief_complaint;
+    $('f-hpi').value = data.history.hpi;
+    $('f-pmh').value = `PMH: ${data.history.pmh}  |  Meds: ${data.history.medications.join(', ')}  |  Allergies: ${data.history.allergies}`;
+
+    // Vitals placeholders — will be filled after session start
+    const grid = $('vitals-grid');
+    const fields = [
+      ['HR', 'hr', '/min'],
+      ['BP', 'bp', 'mmHg'],
+      ['RR', 'rr', '/min'],
+      ['Temp', 'temp', '°C'],
+      ['SpO2', 'spo2', '%'],
+    ];
+    grid.innerHTML = fields.map(([label, key, unit]) => `
+      <div class="vital-cell">
+        <div class="vl">${label} <span style="font-weight:400;text-transform:none">${unit}</span></div>
+        <input type="text" id="v-${key}" value="—" readonly>
+      </div>
+    `).join('');
+  } catch(e) {
+    $('case-name-display').textContent = 'Error loading case';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Start session
+// ═══════════════════════════════════════════════════════════════════
+async function startSession() {
+  $('btn-start').disabled = true;
+  $('btn-start').textContent = 'Starting…';
+
+  try {
+    const res = await fetch('/api/session/start', { method: 'POST' });
+    sessionData = await res.json();
+    if (sessionData.error) { throw new Error(sessionData.error); }
+
+    // Populate vitals in case editor
+    const v = sessionData.vitals;
+    const vf = $('v-hr'); if(vf) vf.value = v.hr;
+    const vbp = $('v-bp'); if(vbp) vbp.value = `${v.bp_systolic}/${v.bp_diastolic}`;
+    const vrr = $('v-rr'); if(vrr) vrr.value = v.rr;
+    const vt = $('v-temp'); if(vt) vt.value = v.temp_c;
+    const vs = $('v-spo2'); if(vs) vs.value = v.spo2;
+
+    showView('view-encounter');
+    initEncounterUI(sessionData);
+    connectWebSocket();
+  } catch(e) {
+    alert('Failed to start session: ' + e.message);
+    $('btn-start').disabled = false;
+    $('btn-start').textContent = '▶ Start Encounter';
+  }
+}
+
+function initEncounterUI(sd) {
+  const v = sd.vitals;
+  // Patient header
+  // (name loaded from case data separately)
+  fetch('/api/case').then(r=>r.json()).then(c => {
+    $('ph-name').textContent = `${c.patient.name}, ${c.patient.age}${c.patient.sex[0]}`;
+    $('ph-sub').textContent = c.patient.chief_complaint;
+  });
+
+  // Vitals bar in EMR panel
+  $('vitals-bar').innerHTML = [
+    ['HR', v.hr + ' /min', v.hr > 100 || v.hr < 50],
+    ['BP', `${v.bp_systolic}/${v.bp_diastolic}`, v.bp_systolic > 140 || v.bp_systolic < 90],
+    ['RR', v.rr + ' /min', v.rr > 20 || v.rr < 12],
+    ['Temp', v.temp_c + '°C', v.temp_c > 38.3 || v.temp_c < 36],
+    ['SpO2', v.spo2 + '%', v.spo2 < 95],
+  ].map(([l, val, abn]) => `
+    <div class="vital-display">
+      <div class="vd-label">${l}</div>
+      <div class="vd-value ${abn ? 'abnormal' : ''}">${val}</div>
+    </div>
+  `).join('');
+
+  $('messages').innerHTML = '';
+  $('results-area').innerHTML = '<div class="emr-empty" id="emr-empty">No orders placed yet.</div>';
+  setStatus('Active encounter', 'pill-active');
+
+  appendSysMsg('Encounter started. The patient is in your exam bay.');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// WebSocket
+// ═══════════════════════════════════════════════════════════════════
+let currentPatientBubble = null;
+
+function connectWebSocket() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+
+    switch(msg.type) {
+
+      case 'token':
+        if (!currentPatientBubble) {
+          // Create patient message container
+          const div = document.createElement('div');
+          div.className = 'msg patient';
+          div.innerHTML = `
+            <div class="avatar av-patient">🧑‍🦱</div>
+            <div>
+              <div class="speaker sp-patient">PATIENT</div>
+              <div class="bubble bubble-patient" id="patient-bubble-current"></div>
+            </div>`;
+          $('messages').appendChild(div);
+          currentPatientBubble = $('patient-bubble-current');
+          hideTyping();
+        }
+        currentPatientBubble.textContent += msg.content;
+        scrollBottom();
+        break;
+
+      case 'patient_start':
+        showTyping();
+        setStatus('Patient is responding…', 'pill-waiting');
+        $('btn-send').disabled = true;
+        currentPatientBubble = null;
+        break;
+
+      case 'patient_end':
+        if (currentPatientBubble) {
+          currentPatientBubble.removeAttribute('id');
+          currentPatientBubble = null;
+        }
+        setStatus('Active encounter', 'pill-active');
+        $('btn-send').disabled = false;
+        $('clinician-input').focus();
+        scrollBottom();
+        break;
+
+      case 'emr_results':
+        msg.orders.forEach(o => addResultCard(o));
+        appendEMRMsg(msg.orders);
+        break;
+
+      case 'disposition_detected':
+        pendingDispositionText = msg.text;
+        showDispositionModal(msg.text);
+        break;
+
+      case 'disposition_cancelled':
+        setStatus('Active encounter', 'pill-active');
+        $('btn-send').disabled = false;
+        $('clinician-input').focus();
+        break;
+
+      case 'session_closed':
+        loadSummary();
+        break;
+
+      case 'error':
+        appendSysMsg('⚠ ' + msg.content);
+        $('btn-send').disabled = false;
+        setStatus('Active encounter', 'pill-active');
+        break;
+    }
+  };
+
+  ws.onclose = () => {
+    if (sessionData && sessionData.active !== false) {
+      setStatus('Disconnected', 'pill-idle');
+    }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Message rendering
+// ═══════════════════════════════════════════════════════════════════
+function appendClinMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg clinician';
+  div.innerHTML = `
+    <div class="avatar av-clinician">👨‍⚕️</div>
+    <div>
+      <div class="speaker sp-clinician">YOU (CLINICIAN)</div>
+      <div class="bubble bubble-clinician">${esc(text)}</div>
+    </div>`;
+  $('messages').appendChild(div);
+  scrollBottom();
+}
+
+function appendSysMsg(text) {
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.innerHTML = `<div class="bubble bubble-system">${esc(text)}</div>`;
+  $('messages').appendChild(div);
+  scrollBottom();
+}
+
+function appendEMRMsg(orders) {
+  const lines = orders.map(o => {
+    const flag = o.is_abnormal ? ' ⚠ ABNORMAL' : '';
+    return `<strong>[EMR] ${o.label}${flag}</strong>: ${o.result}`;
+  }).join('<br>');
+  const div = document.createElement('div');
+  div.className = 'msg emr-msg';
+  div.innerHTML = `<div class="bubble bubble-emr">${lines}</div>`;
+  $('messages').appendChild(div);
+  scrollBottom();
+}
+
+function showTyping() {
+  const m = $('messages');
+  if ($('typing-indicator')) return;
+  const div = document.createElement('div');
+  div.className = 'msg patient';
+  div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="avatar av-patient">🧑‍🦱</div>
+    <div class="bubble bubble-patient typing-bubble">
+      <span></span><span></span><span></span>
+    </div>`;
+  m.appendChild(div);
+  scrollBottom();
+}
+
+function hideTyping() {
+  const el = $('typing-indicator');
+  if (el) el.remove();
+}
+
+function addResultCard(order) {
+  const emptyMsg = $('emr-empty');
+  if (emptyMsg) emptyMsg.remove();
+
+  const div = document.createElement('div');
+  div.className = `result-card ${order.is_abnormal ? 'abnormal' : ''}`;
+  div.innerHTML = `
+    <div class="rc-label">${order.label}${order.is_abnormal ? ' ⚠' : ''}</div>
+    <div class="rc-text">${esc(order.result)}</div>`;
+  $('results-area').appendChild(div);
+  $('results-area').scrollTop = $('results-area').scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Send clinician message
+// ═══════════════════════════════════════════════════════════════════
+function sendMessage() {
+  const input = $('clinician-input');
+  const text = input.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+  appendClinMsg(text);
+  ws.send(JSON.stringify({ type: 'clinician_message', text }));
+  input.value = '';
+  input.style.height = 'auto';
+  $('btn-send').disabled = true;
+  setStatus('Patient is responding…', 'pill-waiting');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Disposition modal
+// ═══════════════════════════════════════════════════════════════════
+function showDispositionModal(text) {
+  $('disp-clinician-text').textContent = text;
+  selectedDispType = null;
+  $('disp-confirm-btn').disabled = true;
+  document.querySelectorAll('.disp-type-btn').forEach(b => b.classList.remove('selected'));
+  $('disp-overlay').classList.add('show');
+}
+
+document.querySelectorAll('.disp-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.disp-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedDispType = btn.dataset.type;
+    $('disp-confirm-btn').disabled = false;
+  });
+});
+
+$('disp-confirm-btn').addEventListener('click', () => {
+  $('disp-overlay').classList.remove('show');
+  setStatus('Closing session…', 'pill-waiting');
+  $('btn-send').disabled = true;
+  ws.send(JSON.stringify({
+    type: 'disposition_confirm',
+    disposition_type: selectedDispType,
+    text: pendingDispositionText,
+  }));
+});
+
+$('disp-cancel-btn').addEventListener('click', () => {
+  $('disp-overlay').classList.remove('show');
+  ws.send(JSON.stringify({ type: 'disposition_cancel' }));
+});
+
+$('btn-end-session').addEventListener('click', () => {
+  if (!confirm('End this encounter without a formal disposition?')) return;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'disposition_confirm',
+      disposition_type: 'manual_end',
+      text: '(Encounter ended manually)',
+    }));
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Summary view
+// ═══════════════════════════════════════════════════════════════════
+async function loadSummary() {
+  const res = await fetch('/api/session/summary');
+  const s = await res.json();
+
+  showView('view-summary');
+  setStatus('Session complete', 'pill-idle');
+
+  $('truth-banner').textContent = `✓ Ground truth diagnosis: ${s.ground_truth}`;
+  $('meta-row').innerHTML = `Session <span>${s.session_id}</span> | Case: <span>${s.case_name}</span> | <span>${s.duration_seconds}s</span> | <span>${s.turns.length}</span> turns`;
+  $('summary-vitals').textContent = fmtVitals(s.vitals);
+  $('summary-vitals').textContent += `  |  Variant: "${s.variant}"`;
+
+  // Turns
+  const tl = $('summary-turns');
+  tl.innerHTML = s.turns.map(t => `
+    <div class="turn-row">
+      <span class="turn-speaker ${t.speaker === 'clinician' ? 'cl' : 'pt'}">
+        ${t.speaker === 'clinician' ? 'Clinician' : 'Patient'}
+      </span>
+      <span>${esc(t.text)}</span>
+    </div>`).join('');
+
+  // Orders
+  if (s.orders && s.orders.length > 0) {
+    $('orders-section').style.display = 'block';
+    $('summary-orders').innerHTML = s.orders.map(o => `
+      <div class="order-row ${o.is_abnormal ? 'abn' : ''}">
+        <span class="ol">${o.label}${o.is_abnormal ? ' ⚠' : ''}</span><br>
+        ${esc(o.result)}
+      </div>`).join('');
+  }
+
+  // Disposition
+  if (s.disposition) {
+    $('summary-disp').innerHTML = `
+      Type: <span>${s.disposition.type}</span><br>
+      Clinician said: <em>${esc(s.disposition.clinician_text)}</em>`;
+  }
+}
+
+$('btn-new-session').addEventListener('click', () => {
+  showView('view-case');
+  setStatus('No active session', 'pill-idle');
+  $('btn-start').disabled = false;
+  $('btn-start').textContent = '▶ Start Encounter';
+  loadCase();
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Input events
+// ═══════════════════════════════════════════════════════════════════
+$('btn-start').addEventListener('click', startSession);
+$('btn-send').addEventListener('click', sendMessage);
+
+$('clinician-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+$('clinician-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════════════
+loadCase();
+</script>
+</body>
+</html>

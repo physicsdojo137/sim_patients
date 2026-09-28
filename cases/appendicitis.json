@@ -1,0 +1,96 @@
+{
+  "case_id": "appendicitis_01",
+  "case_name": "Acute Appendicitis",
+  "patient": {
+    "name": "Jane Smith",
+    "age": 24,
+    "sex": "Female",
+    "chief_complaint": "Abdominal pain for 12 hours"
+  },
+  "history": {
+    "hpi": "Abdominal pain that started near the belly button about 12 hours ago, now migrated to the lower right side. Getting progressively worse. Took 400mg ibuprofen 3 hours ago with minimal relief.",
+    "pmh": "Urinary tract infection treated 3 weeks ago with nitrofurantoin (resolved).",
+    "medications": ["Ibuprofen 400mg PRN (took 3 hours ago)", "None regular"],
+    "allergies": "NKDA",
+    "social_history": "Non-smoker, occasional alcohol, college student",
+    "family_history": "Mother: Type 2 diabetes. Father: hypertension"
+  },
+  "vitals": {
+    "base": {
+      "hr": 94,
+      "bp_systolic": 110,
+      "bp_diastolic": 72,
+      "rr": 16,
+      "temp_c": 37.5,
+      "spo2": 97
+    },
+    "variation": {
+      "hr": [-6, 6],
+      "temp_c": [-0.3, 0.2],
+      "bp_systolic": [-6, 6],
+      "rr": [-1, 2],
+      "spo2": [0, 0]
+    }
+  },
+  "presentation_variants": [
+    "I have this pain near my right hip that started last night. It's getting worse.",
+    "My stomach has been hurting since yesterday. It started around my belly button and now it's more on the right side.",
+    "I've had really bad pain on my right side since last night. I can barely walk straight.",
+    "I came in because my stomach pain has been getting worse all day. It started around my belly button."
+  ],
+  "physical_exam_perceived": "Tenderness when pressing on the lower right abdomen. Also some discomfort near the bladder and right flank. Worse with movement. Nauseous.",
+  "detractors": [
+    {
+      "type": "atypical_location",
+      "description": "Pain is diffuse in the right lower quadrant — also perceived near the bladder and right flank, not pinpoint at McBurney's point. If asked to localize precisely, may describe right flank or bladder pressure."
+    },
+    {
+      "type": "misleading_symptom",
+      "description": "Patient has urinary frequency and mild dysuria, making UTI a plausible competing diagnosis. UA will show 2-5 WBC — equivocal, not diagnostic for UTI."
+    },
+    {
+      "type": "absent_classic_sign",
+      "description": "No fever. Temp 37.5°C or below. Patient does not feel hot, denies chills. The ibuprofen taken earlier may have masked any low-grade fever."
+    },
+    {
+      "type": "confounding_history",
+      "description": "Patient had a UTI 3 weeks ago treated with nitrofurantoin. She is aware of this and will mention it if asked about recent illness or urinary symptoms."
+    }
+  ],
+  "persona": "Mildly anxious college student. Cooperative and answers questions directly. Tends to underestimate severity. A little embarrassed to talk about urinary symptoms.",
+  "ground_truth_diagnosis": "Acute appendicitis",
+  "oracle_results": {
+    "cbc": {
+      "result_text": "WBC 13.8 (H) with 84% neutrophils (left shift). Hgb 13.2 g/dL. Plt 218 k/uL. Normal RBC indices.",
+      "is_abnormal": true
+    },
+    "bmp": {
+      "result_text": "Na 138 | K 3.9 | Cl 102 | CO2 24 | BUN 10 | Cr 0.8 | Glucose 96. All within normal limits.",
+      "is_abnormal": false
+    },
+    "ua": {
+      "result_text": "Color: yellow, clear. SG 1.018. pH 6.0. WBC 2-5/hpf. No bacteria. No nitrites. No leukocyte esterase. Equivocal — not consistent with active UTI.",
+      "is_abnormal": false
+    },
+    "bhcg": {
+      "result_text": "Serum beta-hCG: < 2 mIU/mL. Negative.",
+      "is_abnormal": false
+    },
+    "lipase": {
+      "result_text": "Lipase 42 U/L. Within normal limits.",
+      "is_abnormal": false
+    },
+    "rlq_ultrasound": {
+      "result_text": "Non-compressible appendix identified, diameter 9mm. Periappendiceal fat stranding present. No free fluid. Findings consistent with acute appendicitis.",
+      "is_abnormal": true
+    },
+    "ct_abdomen_pelvis": {
+      "result_text": "Dilated appendix 10mm with periappendiceal fat stranding and wall enhancement. No perforation or abscess identified. Findings highly consistent with acute appendicitis. No alternative diagnosis identified.",
+      "is_abnormal": true
+    },
+    "xray_abdomen": {
+      "result_text": "No free air under the diaphragm. Non-specific bowel gas pattern. No obvious obstruction. Limited sensitivity for appendicitis — recommend CT or ultrasound if clinically suspected.",
+      "is_abnormal": false
+    }
+  }
+}
